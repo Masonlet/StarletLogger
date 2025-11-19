@@ -9,12 +9,14 @@ TEST(LoggerTest, BasicLog) {
 	const std::string output = testing::internal::GetCapturedStdout();
 	EXPECT_EQ(output, "[TestCaller TestFunction INFO] Test message\n");
 }
+#ifndef NDEBUG
 TEST(LoggerTest, BasicDebugLog) {
 	testing::internal::CaptureStdout();
 	SLogger::debug("TestCaller", "TestFunction", "True message");
 	const std::string outputT = testing::internal::GetCapturedStdout();
 	EXPECT_EQ(outputT, "[TestCaller TestFunction DEBUG] True message\n");
 }
+#endif
 TEST(LoggerTest, BasicWarningLog) {
 	testing::internal::CaptureStderr();
 	SLogger::warning("TestCaller", "TestFunction", "Test message");
@@ -35,7 +37,9 @@ TEST(LoggerTest, AllLevels) {
 	SLogger::warning("Caller", "Func", "warning", true);
 	std::string output = testing::internal::GetCapturedStdout();
 	EXPECT_NE(output.find("[Caller Func INFO] info\n"), std::string::npos);
+#ifndef NDEBUG
 	EXPECT_NE(output.find("[Caller Func DEBUG] debug\n"), std::string::npos);
+#endif
 	EXPECT_NE(output.find("[Caller Func WARNING] warning\n"), std::string::npos);
 
 	testing::internal::CaptureStderr();
