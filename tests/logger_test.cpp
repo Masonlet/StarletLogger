@@ -1,33 +1,44 @@
 #include <gtest/gtest.h>
+
 #include "starlet-logger/logger.hpp"
 
+#include <vector>
+
 namespace SLogger = Starlet::Logger;
+
+inline void expectStderrContains(const std::vector<std::string>& expectedSubstrings) {
+	std::string output = testing::internal::GetCapturedStderr();
+	for (const std::string& substring : expectedSubstrings)
+		EXPECT_NE(output.find(substring), std::string::npos) << "Expected to find: \"" << substring << "\" in stderr output";
+}
+
+inline void expectStdoutContains(const std::vector<std::string>& expectedSubstrings) {
+	std::string output = testing::internal::GetCapturedStdout();
+	for (const std::string& substring : expectedSubstrings)
+		EXPECT_NE(output.find(substring), std::string::npos) << "Expected to find: \"" << substring << "\" in stdout output";
+}
 
 TEST(LoggerTest, BasicLog) {
 	testing::internal::CaptureStdout();
 	SLogger::log("TestCaller", "TestFunction", "Test message");
-	const std::string output = testing::internal::GetCapturedStdout();
-	EXPECT_EQ(output, "[TestCaller TestFunction INFO] Test message\n");
+	expectStdoutContains({ "[TestCaller TestFunction INFO] Test message\n" });
 }
 #ifndef NDEBUG
 TEST(LoggerTest, BasicDebugLog) {
 	testing::internal::CaptureStdout();
 	SLogger::debug("TestCaller", "TestFunction", "True message");
-	const std::string outputT = testing::internal::GetCapturedStdout();
-	EXPECT_EQ(outputT, "[TestCaller TestFunction DEBUG] True message\n");
+	expectStdoutContains({ "[TestCaller TestFunction DEBUG] True message\n" });
 }
 #endif
 TEST(LoggerTest, BasicWarningLog) {
 	testing::internal::CaptureStderr();
 	SLogger::warning("TestCaller", "TestFunction", "Test message");
-	const std::string output = testing::internal::GetCapturedStderr();
-	EXPECT_EQ(output, "[TestCaller TestFunction WARNING] Test message\n");
+	expectStderrContains({ "[TestCaller TestFunction WARNING] Test message\n" });
 }
 TEST(LoggerTest, BasicErrorLog) {
 	testing::internal::CaptureStderr();
 	SLogger::error("TestCaller", "TestFunction", "Test message");
-	const std::string output = testing::internal::GetCapturedStderr();
-	EXPECT_EQ(output, "[TestCaller TestFunction ERROR] Test message\n");
+	expectStderrContains({ "[TestCaller TestFunction ERROR] Test message\n" });
 }
 
 TEST(LoggerTest, AllLevels) {
@@ -35,40 +46,41 @@ TEST(LoggerTest, AllLevels) {
 	SLogger::log("Caller", "Func", "info");
 	SLogger::debug("Caller", "Func", "debug");
 	SLogger::warning("Caller", "Func", "warning", true);
-	std::string output = testing::internal::GetCapturedStdout();
-	EXPECT_NE(output.find("[Caller Func INFO] info\n"), std::string::npos);
-#ifndef NDEBUG
-	EXPECT_NE(output.find("[Caller Func DEBUG] debug\n"), std::string::npos);
-#endif
-	EXPECT_NE(output.find("[Caller Func WARNING] warning\n"), std::string::npos);
+	expectStdoutContains({
+		"[Caller Func INFO] info\n",
+		"[Caller Func WARNING] warning\n"
+	#ifndef NDEBUG
+		, "[Caller Func DEBUG] debug\n"
+	#endif
+	});
 
 	testing::internal::CaptureStderr();
 	SLogger::error("Caller", "Func", "error");
 	SLogger::warning("Caller", "Func", "warning");
-	output = testing::internal::GetCapturedStderr();
-	EXPECT_NE(output.find("[Caller Func ERROR] error\n"), std::string::npos);
-	EXPECT_NE(output.find("[Caller Func WARNING] warning\n"), std::string::npos);
+	expectStderrContains({
+		"[Caller Func ERROR] error\n",
+		"[Caller Func WARNING] warning\n"
+	});
 }
 
 TEST(LoggerTest, AllErrorLevels) {
 	testing::internal::CaptureStderr();
 	SLogger::error("Caller", "Func", "error");
-	const std::string output = testing::internal::GetCapturedStderr();
-	EXPECT_NE(output.find("[Caller Func ERROR] error\n"), std::string::npos);
+	expectStderrContains({ "[Caller Func ERROR] error\n" });
 }
 
 TEST(LoggerTest, WarningLogReturnValue) {
 	testing::internal::CaptureStdout();
 	EXPECT_TRUE(SLogger::warning("C", "F", "msg", true));
-	testing::internal::GetCapturedStdout();
+	expectStdoutContains({ "[C F WARNING] msg\n" });
 
 	testing::internal::CaptureStderr();
 	EXPECT_FALSE(SLogger::warning("C", "F", "msg", false));
-	testing::internal::GetCapturedStderr();
+	expectStderrContains({ "[C F WARNING] msg\n" });
 }
 
 TEST(LoggerTest, ErrorReturnsFalse) {
 	testing::internal::CaptureStderr();
 	EXPECT_FALSE(SLogger::error("C", "F", "msg"));
-	testing::internal::GetCapturedStderr();
+	expectStderrContains({ "[C F ERROR] msg\n" });
 }
